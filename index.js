@@ -1,33 +1,7 @@
-// Library Code
-function createStore(reducer) {
-  // The store should have four parts
-  // 1. The state
-  // 2. Get the state.
-  // 3. Listen to changes on the state.
-  // 4. Update the state
-
-  let state;
-  let listeners = [];
-
-  const getState = () => state;
-
-  const subscribe = (listener) => {
-    listeners.push(listener);
-    return () => {
-      listeners = listeners.filter((l) => l !== listener);
-    };
-  };
-
-  const dispatch = (action) => {
-    state = reducer(state, action);
-    listeners.forEach((listener) => listener());
-  };
-
-  return {
-    getState,
-    subscribe,
-    dispatch,
-  };
+function generateId() {
+  return (
+    Math.random().toString(36).substring(2) + new Date().getTime().toString(36)
+  );
 }
 
 // App Code
@@ -100,59 +74,89 @@ function goals(state = [], action) {
   }
 }
 
-function app(state = {}, action) {
-  return {
-    todos: todos(state.todos, action),
-    goals: goals(state.goals, action),
-  };
-}
-
-const store = createStore(app);
+const store = Redux.createStore(
+  Redux.combineReducers({
+    todos,
+    goals,
+  })
+);
 
 store.subscribe(() => {
-  console.log("The new state is: ", store.getState());
+  const { todos, goals } = store.getState();
+
+  document.getElementById("todos").innerHTML = "";
+  document.getElementById("goals").innerHTML = "";
+
+  todos.forEach(addTodoToDOM);
+  goals.forEach(addGoalToDOM);
 });
 
-store.dispatch(
-  addTodoAction({
-    id: 0,
-    name: "Walk the dog",
-    complete: false,
-  })
-);
+//DOM code
+function addTodo() {
+  const input = document.getElementById("todo");
+  const name = input.value;
+  input.value = "";
 
-store.dispatch(
-  addTodoAction({
-    id: 1,
-    name: "Wash the car",
-    complete: false,
-  })
-);
+  store.dispatch(
+    addTodoAction({
+      name,
+      complete: false,
+      id: generateId(),
+    })
+  );
+}
 
-store.dispatch(
-  addTodoAction({
-    id: 2,
-    name: "Go to the gym",
-    complete: true,
-  })
-);
+function addGoal() {
+  const input = document.getElementById("goal");
+  const name = input.value;
+  input.value = "";
 
-store.dispatch(removeTodoAction(1));
+  store.dispatch(addGoalAction({ name, id: generateId() }));
+}
 
-store.dispatch(toggleTodoAction(0));
+function toggleTodo() {
+  const id = document.getElementById();
+  store.dispatch();
+}
 
-store.dispatch(
-  addGoalAction({
-    id: 0,
-    name: "Learn Redux",
-  })
-);
+document.getElementById("todoBtn").addEventListener("click", addTodo);
+document.getElementById("goalBtn").addEventListener("click", addGoal);
 
-store.dispatch(
-  addGoalAction({
-    id: 1,
-    name: "Lose 20 pounds",
-  })
-);
+function createRemoveButton(onClick) {
+  const removeBtn = document.createElement("button");
+  removeBtn.innerHTML = "X";
+  removeBtn.addEventListener("click", onClick);
+  return removeBtn;
+}
 
-store.dispatch(removeGoalAction(1));
+function addTodoToDOM(todo) {
+  const node = document.createElement("li");
+  const text = document.createTextNode(todo.name);
+
+  const removeBtn = createRemoveButton(() => {
+    store.dispatch(removeTodoAction(todo.id));
+  });
+
+  node.appendChild(text);
+  node.appendChild(removeBtn);
+  node.style.textDecoration = todo.complete ? "line-through" : "none";
+  node.addEventListener("click", () => {
+    store.dispatch(toggleTodoAction(todo.id));
+  });
+
+  document.getElementById("todos").appendChild(node);
+}
+
+function addGoalToDOM(goal) {
+  const node = document.createElement("li");
+  const text = document.createTextNode(goal.name);
+
+  const removeBtn = createRemoveButton(() => {
+    store.dispatch(removeGoalAction(goal.id));
+  });
+
+  node.appendChild(text);
+  node.appendChild(removeBtn);
+
+  document.getElementById("goals").appendChild(node);
+}
